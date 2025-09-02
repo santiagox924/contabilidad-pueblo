@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,11 +11,13 @@ datasource db {
 }
 
 model CoaAccount {
-  id     Int    @id @default(autoincrement())
-  code   String @unique
-  name   String
-  nature String   // 'D' o 'C'
+  id          Int           @id @default(autoincrement())
+  code        String        @unique
+  name        String
+  nature      String // 'D' o 'C'
+  JournalLine JournalLine[]
 }
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
@@ -26,6 +25,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
 // --- Día 4: Terceros + Auditoría ---
 
 enum PartyType {
@@ -36,18 +36,21 @@ enum PartyType {
 }
 
 model ThirdParty {
-  id               Int       @id @default(autoincrement())
-  type             PartyType
-  document         String?   @unique
-  name             String
-  email            String?
-  phone            String?
-  address          String?
-  city             String?
-  paymentTermsDays Int?
-  active           Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                 Int                  @id @default(autoincrement())
+  type               PartyType
+  document           String?              @unique
+  name               String
+  email              String?
+  phone              String?
+  address            String?
+  city               String?
+  paymentTermsDays   Int?
+  active             Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  SalesInvoice       SalesInvoice[]
+  AccountsReceivable AccountsReceivable[]
+  JournalLine        JournalLine[]
 
   @@index([type])
   @@index([name])
@@ -58,11 +61,199 @@ model AuditLog {
   id       Int      @id @default(autoincrement())
   entity   String
   entityId Int
-  action   String   // CREATE | UPDATE | DELETE
+  action   String // CREATE | UPDATE | DELETE
   userId   Int?
   ts       DateTime @default(now())
   changes  Json?
 
   @@index([entity, entityId])
   @@index([ts])
+}
+
+// --- Día 5: Items + Inventario ---
+
+enum ItemType {
+  PRODUCT
+  SERVICE
+}
+
+enum StockMoveType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+model Item {
+  id        Int      @id @default(autoincrement())
+  sku       String   @unique
+  name      String
+  type      ItemType
+  unit      String   @default("UN")
+  price     Decimal?
+  ivaPct    Int?
+  costAvg   Decimal? @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // back-relations
+  stockMoves       StockMove[]
+  layers           StockLayer[]
+  SalesInvoiceLine SalesInvoiceLine[]
+
+  @@index([type])
+  @@index([active])
+  @@index([name])
+}
+
+model Warehouse {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // back-relations
+  stockMoves StockMove[]
+  layers     StockLayer[]
+}
+
+model StockMove {
+  id          Int           @id @default(autoincrement())
+  itemId      Int
+  warehouseId Int
+  type        StockMoveType
+  qty         Decimal
+  unitCost    Decimal
+  refType     String?
+  refId       Int?
+  note        String?
+  ts          DateTime      @default(now())
+
+  // relaciones explícitas
+  item      Item      @relation(fields: [itemId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  // back-relation a las capas creadas por ESTE movimiento de ENTRADA
+  layersCreated StockLayer[] @relation("MoveInLayer")
+
+  @@index([itemId, warehouseId])
+  @@index([ts])
+  @@index([type])
+}
+
+// --- FIFO layers ---
+model StockLayer {
+  id           Int      @id @default(autoincrement())
+  itemId       Int
+  warehouseId  Int
+  remainingQty Decimal // cantidad disponible en esta “capa”
+  unitCost     Decimal
+  createdAt    DateTime @default(now())
+
+  // FK opcional al movimiento de ENTRADA que originó la capa
+  moveInId Int?
+  moveIn   StockMove? @relation("MoveInLayer", fields: [moveInId], references: [id])
+
+  // relaciones a item y bodega
+  item      Item      @relation(fields: [itemId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@index([itemId, warehouseId])
+}
+
+// --- Día 6: Ventas, CxC y Diario ---
+// Enums
+enum PaymentType {
+  CASH
+  CREDIT
+}
+
+enum InvoiceStatus {
+  ISSUED
+  VOID
+}
+
+model SalesInvoice {
+  id           Int           @id @default(autoincrement())
+  number       Int           @unique
+  thirdPartyId Int
+  issueDate    DateTime      @default(now())
+  dueDate      DateTime?
+  paymentType  PaymentType
+  status       InvoiceStatus @default(ISSUED)
+  subtotal     Decimal       @default(0)
+  tax          Decimal       @default(0)
+  total        Decimal       @default(0)
+  note         String?
+
+  thirdParty ThirdParty          @relation(fields: [thirdPartyId], references: [id])
+  lines      SalesInvoiceLine[]
+  ar         AccountsReceivable?
+
+  @@index([thirdPartyId])
+  @@index([issueDate])
+}
+
+model SalesInvoiceLine {
+  id           Int     @id @default(autoincrement())
+  invoiceId    Int
+  itemId       Int
+  qty          Decimal
+  unitPrice    Decimal
+  discountPct  Int? // 0..100
+  vatPct       Int? // 0,5,19...
+  lineSubtotal Decimal // calculado: qty * unitPrice * (1 - d%)
+  lineVat      Decimal // calculado
+  lineTotal    Decimal // calculado
+
+  invoice SalesInvoice @relation(fields: [invoiceId], references: [id])
+  item    Item         @relation(fields: [itemId], references: [id])
+
+  @@index([invoiceId])
+}
+
+model AccountsReceivable {
+  id           Int     @id @default(autoincrement())
+  thirdPartyId Int
+  invoiceId    Int     @unique
+  balance      Decimal @default(0)
+
+  thirdParty ThirdParty   @relation(fields: [thirdPartyId], references: [id])
+  invoice    SalesInvoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([thirdPartyId])
+}
+
+// Diario contable (simple)
+model JournalEntry {
+  id          Int           @id @default(autoincrement())
+  date        DateTime      @default(now())
+  sourceType  String
+  sourceId    Int
+  description String?
+  lines       JournalLine[]
+
+  @@index([date])
+  @@index([sourceType, sourceId])
+}
+
+model JournalLine {
+  id           Int     @id @default(autoincrement())
+  entryId      Int
+  accountId    Int?
+  accountCode  String // redundante para no depender siempre del id
+  thirdPartyId Int?
+  debit        Decimal @default(0)
+  credit       Decimal @default(0)
+  description  String?
+
+  entry      JournalEntry @relation(fields: [entryId], references: [id])
+  account    CoaAccount?  @relation(fields: [accountId], references: [id])
+  thirdParty ThirdParty?  @relation(fields: [thirdPartyId], references: [id])
+
+  @@index([entryId])
+  @@index([accountCode])
 }
