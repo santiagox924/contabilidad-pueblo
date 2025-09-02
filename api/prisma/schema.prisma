@@ -10,12 +10,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/**
+ * =========================
+ * Plan de cuentas / Usuarios
+ * =========================
+ */
 model CoaAccount {
-  id          Int           @id @default(autoincrement())
-  code        String        @unique
-  name        String
-  nature      String // 'D' o 'C'
-  JournalLine JournalLine[]
+  id           Int           @id @default(autoincrement())
+  code         String        @unique
+  name         String
+  nature       String // 'D' o 'C'
+  journalLines JournalLine[]
 }
 
 model User {
@@ -26,8 +31,11 @@ model User {
   updatedAt    DateTime @updatedAt
 }
 
-// --- Día 4: Terceros + Auditoría ---
-
+/**
+ * =========================
+ * Terceros + Auditoría
+ * =========================
+ */
 enum PartyType {
   CLIENT
   PROVIDER
@@ -36,21 +44,28 @@ enum PartyType {
 }
 
 model ThirdParty {
-  id                 Int                  @id @default(autoincrement())
-  type               PartyType
-  document           String?              @unique
-  name               String
-  email              String?
-  phone              String?
-  address            String?
-  city               String?
-  paymentTermsDays   Int?
-  active             Boolean              @default(true)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  SalesInvoice       SalesInvoice[]
-  AccountsReceivable AccountsReceivable[]
-  JournalLine        JournalLine[]
+  id               Int       @id @default(autoincrement())
+  type             PartyType
+  document         String?   @unique
+  name             String
+  email            String?
+  phone            String?
+  address          String?
+  city             String?
+  paymentTermsDays Int?
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // back-relations
+  salesInvoices      SalesInvoice[]
+  accountsReceivable AccountsReceivable[]
+  journalLines       JournalLine[]
+  purchaseInvoices   PurchaseInvoice[]
+  accountsPayable    AccountsPayable[]
+  cashReceipts       CashReceipt[]
+  vendorPayments     VendorPayment[]
+  salesCreditNotes   SalesCreditNote[]
 
   @@index([type])
   @@index([name])
@@ -70,8 +85,11 @@ model AuditLog {
   @@index([ts])
 }
 
-// --- Día 5: Items + Inventario ---
-
+/**
+ * =========================
+ * Items + Inventario (FIFO)
+ * =========================
+ */
 enum ItemType {
   PRODUCT
   SERVICE
@@ -93,15 +111,17 @@ model Item {
   unit      String   @default("UN")
   price     Decimal?
   ivaPct    Int?
-  costAvg   Decimal? @default(0)
+  costAvg   Decimal  @default(0) // no nulo para simplificar cálculos
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // back-relations
-  stockMoves       StockMove[]
-  layers           StockLayer[]
-  SalesInvoiceLine SalesInvoiceLine[]
+  stockMoves           StockMove[]
+  layers               StockLayer[]
+  salesInvoiceLines    SalesInvoiceLine[]
+  purchaseInvoiceLines PurchaseInvoiceLine[]
+  salesCreditNoteLines SalesCreditNoteLine[]
 
   @@index([type])
   @@index([active])
@@ -144,12 +164,11 @@ model StockMove {
   @@index([type])
 }
 
-// --- FIFO layers ---
 model StockLayer {
   id           Int      @id @default(autoincrement())
   itemId       Int
   warehouseId  Int
-  remainingQty Decimal // cantidad disponible en esta “capa”
+  remainingQty Decimal
   unitCost     Decimal
   createdAt    DateTime @default(now())
 
@@ -164,8 +183,11 @@ model StockLayer {
   @@index([itemId, warehouseId])
 }
 
-// --- Día 6: Ventas, CxC y Diario ---
-// Enums
+/**
+ * =========================
+ * Ventas, CxC y Diario
+ * =========================
+ */
 enum PaymentType {
   CASH
   CREDIT
@@ -189,12 +211,15 @@ model SalesInvoice {
   total        Decimal       @default(0)
   note         String?
 
-  thirdParty ThirdParty          @relation(fields: [thirdPartyId], references: [id])
-  lines      SalesInvoiceLine[]
-  ar         AccountsReceivable?
+  thirdParty         ThirdParty          @relation(fields: [thirdPartyId], references: [id])
+  lines              SalesInvoiceLine[]
+  ar                 AccountsReceivable?
+  receiptAllocations ReceiptAllocation[]
+  creditNotes        SalesCreditNote[]
 
   @@index([thirdPartyId])
   @@index([issueDate])
+  @@index([status])
 }
 
 model SalesInvoiceLine {
@@ -203,11 +228,11 @@ model SalesInvoiceLine {
   itemId       Int
   qty          Decimal
   unitPrice    Decimal
-  discountPct  Int? // 0..100
-  vatPct       Int? // 0,5,19...
-  lineSubtotal Decimal // calculado: qty * unitPrice * (1 - d%)
-  lineVat      Decimal // calculado
-  lineTotal    Decimal // calculado
+  discountPct  Int?
+  vatPct       Int?
+  lineSubtotal Decimal
+  lineVat      Decimal
+  lineTotal    Decimal
 
   invoice SalesInvoice @relation(fields: [invoiceId], references: [id])
   item    Item         @relation(fields: [itemId], references: [id])
@@ -227,7 +252,11 @@ model AccountsReceivable {
   @@index([thirdPartyId])
 }
 
-// Diario contable (simple)
+/**
+ * =========================
+ * Diario contable
+ * =========================
+ */
 model JournalEntry {
   id          Int           @id @default(autoincrement())
   date        DateTime      @default(now())
@@ -244,7 +273,7 @@ model JournalLine {
   id           Int     @id @default(autoincrement())
   entryId      Int
   accountId    Int?
-  accountCode  String // redundante para no depender siempre del id
+  accountCode  String
   thirdPartyId Int?
   debit        Decimal @default(0)
   credit       Decimal @default(0)
@@ -256,4 +285,179 @@ model JournalLine {
 
   @@index([entryId])
   @@index([accountCode])
+}
+
+/**
+ * =========================
+ * Compras, CxP
+ * =========================
+ */
+enum PurchaseStatus {
+  ISSUED
+  VOID
+}
+
+model PurchaseInvoice {
+  id           Int            @id @default(autoincrement())
+  number       Int            @unique
+  thirdPartyId Int
+  issueDate    DateTime       @default(now())
+  dueDate      DateTime?
+  paymentType  PaymentType
+  status       PurchaseStatus @default(ISSUED)
+  subtotal     Decimal        @default(0)
+  tax          Decimal        @default(0)
+  total        Decimal        @default(0)
+  note         String?
+
+  thirdParty         ThirdParty            @relation(fields: [thirdPartyId], references: [id])
+  lines              PurchaseInvoiceLine[]
+  ap                 AccountsPayable?
+  paymentAllocations PaymentAllocation[]
+
+  @@index([thirdPartyId])
+  @@index([issueDate])
+  @@index([status])
+}
+
+model PurchaseInvoiceLine {
+  id           Int     @id @default(autoincrement())
+  invoiceId    Int
+  itemId       Int
+  qty          Decimal
+  unitCost     Decimal
+  vatPct       Int?
+  lineSubtotal Decimal
+  lineVat      Decimal
+  lineTotal    Decimal
+
+  invoice PurchaseInvoice @relation(fields: [invoiceId], references: [id])
+  item    Item            @relation(fields: [itemId], references: [id])
+
+  @@index([invoiceId])
+}
+
+model AccountsPayable {
+  id           Int     @id @default(autoincrement())
+  thirdPartyId Int
+  invoiceId    Int     @unique
+  balance      Decimal @default(0)
+
+  thirdParty ThirdParty      @relation(fields: [thirdPartyId], references: [id])
+  invoice    PurchaseInvoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([thirdPartyId])
+}
+
+/**
+ * =========================
+ * Tesorería (Cobros / Pagos)
+ * =========================
+ */
+model CashReceipt {
+  id           Int      @id @default(autoincrement())
+  thirdPartyId Int
+  date         DateTime @default(now())
+  method       String?
+  total        Decimal  @default(0)
+  note         String?
+
+  thirdParty  ThirdParty          @relation(fields: [thirdPartyId], references: [id])
+  allocations ReceiptAllocation[]
+
+  @@index([thirdPartyId, date])
+}
+
+model ReceiptAllocation {
+  id        Int     @id @default(autoincrement())
+  receiptId Int
+  invoiceId Int
+  amount    Decimal
+
+  receipt CashReceipt  @relation(fields: [receiptId], references: [id])
+  invoice SalesInvoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
+
+model VendorPayment {
+  id           Int      @id @default(autoincrement())
+  thirdPartyId Int
+  date         DateTime @default(now())
+  method       String?
+  total        Decimal  @default(0)
+  note         String?
+
+  thirdParty  ThirdParty          @relation(fields: [thirdPartyId], references: [id])
+  allocations PaymentAllocation[]
+
+  @@index([thirdPartyId, date])
+}
+
+model PaymentAllocation {
+  id        Int     @id @default(autoincrement())
+  paymentId Int
+  invoiceId Int
+  amount    Decimal
+
+  payment VendorPayment   @relation(fields: [paymentId], references: [id])
+  invoice PurchaseInvoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
+
+/**
+ * =========================
+ * Notas Crédito de Ventas
+ * =========================
+ */
+model SalesCreditNote {
+  id           Int           @id @default(autoincrement())
+  number       Int           @unique
+  invoiceId    Int
+  thirdPartyId Int
+  issueDate    DateTime      @default(now())
+  status       InvoiceStatus @default(ISSUED)
+  reason       String?
+  subtotal     Decimal       @default(0)
+  tax          Decimal       @default(0)
+  total        Decimal       @default(0)
+
+  invoice    SalesInvoice          @relation(fields: [invoiceId], references: [id])
+  thirdParty ThirdParty            @relation(fields: [thirdPartyId], references: [id])
+  lines      SalesCreditNoteLine[]
+
+  @@index([invoiceId])
+  @@index([thirdPartyId])
+  @@index([issueDate])
+  @@index([status])
+}
+
+model SalesCreditNoteLine {
+  id           Int     @id @default(autoincrement())
+  creditNoteId Int
+  itemId       Int
+  qty          Decimal
+  unitPrice    Decimal
+  vatPct       Int?
+  lineSubtotal Decimal
+  lineVat      Decimal
+  lineTotal    Decimal
+
+  creditNote SalesCreditNote @relation(fields: [creditNoteId], references: [id])
+  item       Item            @relation(fields: [itemId], references: [id])
+
+  @@index([creditNoteId])
+}
+model AccountingPeriod {
+  id        Int      @id @default(autoincrement())
+  year      Int
+  month     Int            // 1..12
+  start     DateTime
+  end       DateTime
+  status    String  @default("OPEN") // OPEN | CLOSED
+  closedAt  DateTime?
+
+  @@unique([year, month])
+  @@index([status])
 }

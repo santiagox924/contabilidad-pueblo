@@ -9,7 +9,9 @@ import { PartiesModule } from './parties/parties.module';
 import { ItemsModule } from './items/items.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
-
+import { PurchasesModule } from './purchases/purchases.module';
+import { TreasuryModule } from './treasury/treasury.module';
+import { AccountingModule } from './accounting/accounting.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -22,6 +24,9 @@ import { SalesModule } from './sales/sales.module';
     ItemsModule,
     InventoryModule,
     SalesModule,
+    PurchasesModule,
+    TreasuryModule,
+    AccountingModule,
   ],
 })
 export class AppModule {}
