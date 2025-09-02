@@ -26,3 +26,43 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+// --- Día 4: Terceros + Auditoría ---
+
+enum PartyType {
+  CLIENT
+  PROVIDER
+  EMPLOYEE
+  OTHER
+}
+
+model ThirdParty {
+  id               Int       @id @default(autoincrement())
+  type             PartyType
+  document         String?   @unique
+  name             String
+  email            String?
+  phone            String?
+  address          String?
+  city             String?
+  paymentTermsDays Int?
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([type])
+  @@index([name])
+  @@index([active])
+}
+
+model AuditLog {
+  id       Int      @id @default(autoincrement())
+  entity   String
+  entityId Int
+  action   String   // CREATE | UPDATE | DELETE
+  userId   Int?
+  ts       DateTime @default(now())
+  changes  Json?
+
+  @@index([entity, entityId])
+  @@index([ts])
+}
