@@ -148,7 +148,7 @@ export default function NewSalesInvoicePage() {
       };
       const created = await apiPost<{ id: number; number: number; total: number }>("/sales/invoices", payload);
       // Redirige a detalle (si luego haces /sales/[id]), por ahora a home:
-      router.push("/");
+      router.push(`/sales/${created.id}`);
     } catch (e: any) {
       setErr(e?.message || "Error creando factura");
     } finally {

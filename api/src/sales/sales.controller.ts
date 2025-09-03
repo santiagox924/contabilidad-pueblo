@@ -1,3 +1,4 @@
+// src/sales/sales.controller.ts
 import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SalesService } from './sales.service';
@@ -19,7 +20,13 @@ export class SalesController {
     return this.sales.findOne(id);
   }
 
-  // 👇 NUEVOS endpoints
+  // ✅ NUEVO: anulación de factura
+  @Post('invoices/:id/void')
+  voidInvoice(@Param('id', ParseIntPipe) id: number) {
+    return this.sales.voidInvoice(id);
+  }
+
+  // Notas crédito
   @Post('credit-notes')
   createCredit(@Body() dto: CreateCreditNoteDto) {
     return this.sales.createCreditNote(dto);
@@ -27,6 +34,6 @@ export class SalesController {
 
   @Get('credit-notes/:id')
   getCredit(@Param('id', ParseIntPipe) id: number) {
-    return this.sales.getCreditNote(id); // 👈 delega al servicio
+    return this.sales.getCreditNote(id); // usa un método del service
   }
 }
