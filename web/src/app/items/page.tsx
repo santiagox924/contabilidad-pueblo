@@ -1,8 +1,13 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import { apiGet } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 
 type Item = {
   id: number;
@@ -10,21 +15,45 @@ type Item = {
   name: string;
   type: "PRODUCT" | "SERVICE";
   unit: string;
-  price: number | string | null;
-  ivaPct: number | null;
+  price?: number | null;
+  ivaPct?: number | null;
   active: boolean;
 };
 
-export const dynamic = "force-dynamic"; // evita cache
+export default function ItemsPage() {
+  const [items, setItems] = React.useState<Item[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-export default async function ItemsPage() {
-  const items = await apiGet<Item[]>("/items").catch(() => []);
+  async function load() {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiGet<Item[]>("/items");
+      setItems(data ?? []);
+    } catch (e: any) {
+      setError(e?.message || "Error cargando ítems");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  React.useEffect(() => {
+    void load();
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Ítems</h1>
-        <Link href="/items/new" className="underline">Nuevo ítem</Link>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => load()} disabled={loading}>
+            {loading ? "Cargando..." : "Refrescar"}
+          </Button>
+          <Link href="/items/new">
+            <Button>Nuevo ítem</Button>
+          </Link>
+        </div>
       </div>
 
       <Card>
@@ -32,49 +61,49 @@ export default async function ItemsPage() {
           <CardTitle>Catálogo</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left border-b">
-                <tr className="text-muted-foreground">
-                  <th className="py-2 pr-4">SKU</th>
-                  <th className="py-2 pr-4">Nombre</th>
-                  <th className="py-2 pr-4">Tipo</th>
-                  <th className="py-2 pr-4">Unidad</th>
-                  <th className="py-2 pr-4">Precio</th>
-                  <th className="py-2 pr-4">IVA %</th>
-                  <th className="py-2 pr-4">Estado</th>
-                  <th className="py-2 pr-4"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it) => (
-                  <tr key={it.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4">{it.sku}</td>
-                    <td className="py-2 pr-4">{it.name}</td>
-                    <td className="py-2 pr-4">{it.type === "PRODUCT" ? "Producto" : "Servicio"}</td>
-                    <td className="py-2 pr-4">{it.unit}</td>
-                    <td className="py-2 pr-4">{it.price ?? "-"}</td>
-                    <td className="py-2 pr-4">{it.ivaPct ?? 0}</td>
-                    <td className="py-2 pr-4">
-                      <Badge className={cn(!it.active && "opacity-60")}>
-                        {it.active ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </td>
-                    <td className="py-2 pr-4">
-                      <Link href={`/items/${it.id}`} className="underline">Ver</Link>
-                    </td>
-                  </tr>
-                ))}
-                {items.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="py-6 text-center text-muted-foreground">
-                      Sin ítems aún. Crea el primero.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {error && (
+            <div className="text-red-600 text-sm mb-3">{error}</div>
+          )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>SKU</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Unidad</TableHead>
+                <TableHead className="text-right">Precio</TableHead>
+                <TableHead className="text-right">IVA %</TableHead>
+                <TableHead className="text-center">Activo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.length === 0 && !loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Sin registros
+                  </TableCell>
+                </TableRow>
+              ) : (
+                items.map((it) => (
+                  <TableRow key={it.id}>
+                    <TableCell className="font-medium">{it.sku}</TableCell>
+                    <TableCell>{it.name}</TableCell>
+                    <TableCell>{it.type === "PRODUCT" ? "Producto" : "Servicio"}</TableCell>
+                    <TableCell>{it.unit}</TableCell>
+                    <TableCell className="text-right">
+                      {it.price ?? 0}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {it.ivaPct ?? 0}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {it.active ? "Sí" : "No"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
