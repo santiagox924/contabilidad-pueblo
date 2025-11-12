@@ -1,0 +1,1989 @@
+// api/prisma/schema.prisma
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * =========================
+ * Enums
+ * =========================
+ */
+enum PartyType {
+  CLIENT
+  PROVIDER
+  EMPLOYEE
+  OTHER
+}
+
+enum ItemType {
+  PRODUCT
+  SERVICE
+  CONSUMABLE // <- opcional para "Insumos"
+}
+
+enum StockMoveType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+enum StockAdjustmentReason {
+  ACCOUNTING
+  DONATION
+  PRODUCTION
+  CUSTOMER_RETURN
+}
+
+enum PaymentType {
+  CASH
+  CREDIT
+}
+
+enum InvoiceStatus {
+  ISSUED
+  VOID
+}
+
+enum PurchaseStatus {
+  ISSUED
+  VOID
+}
+
+enum InstallmentStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  CANCELED
+}
+
+enum InstallmentFrequency {
+  MONTHLY
+  BIWEEKLY
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum EmploymentContractType {
+  INDEFINITE
+  FIXED_TERM
+  SERVICE
+  APPRENTICESHIP
+}
+
+enum PayrollFrequency {
+  MONTHLY
+  BIWEEKLY
+  WEEKLY
+  DAILY
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  CALCULATED
+  POSTED
+  CANCELED
+}
+
+enum PayrollComponentKind {
+  EARNING
+  DEDUCTION
+  EMPLOYER_CONTRIBUTION
+  PROVISION
+}
+
+enum EmployeeAffiliationType {
+  EPS
+  PENSION
+  ARL
+  CCF
+  COMPENSATION_FUND
+  UNION
+  OTHER
+}
+
+enum UserRoleCode {
+  SUPER_ADMIN
+  ADMINISTRATOR
+  ACCOUNTING_ADMIN
+  ACCOUNTANT
+  ACCOUNTING_ASSISTANT
+  AUDITOR
+  TREASURY
+  PURCHASING
+  SALES
+  INVENTORY
+  COST
+  HR
+  EXTERNAL_AUDITOR
+}
+
+/**
+ * ====== ACTUALIZADO: familias de unidad ======
+ */
+enum UnitKind {
+  COUNT
+  WEIGHT
+  VOLUME
+  LENGTH
+  AREA
+}
+
+/**
+ * ====== ACTUALIZADO: catálogo de unidades ======
+ */
+enum Unit {
+  // COUNT
+  UN
+  DZ
+  PKG
+  BOX
+  PR
+  ROLL
+
+  // WEIGHT
+  MG
+  G
+  KG
+  LB
+
+  // VOLUME
+  ML
+  L
+  M3
+  CM3
+  OZ_FL
+  GAL
+
+  // LENGTH
+  MM
+  CM
+  M
+  KM
+  IN
+  FT
+  YD
+
+  // AREA
+  CM2
+  M2
+  IN2
+  FT2
+  YD2
+}
+
+enum AccountingPeriodType {
+  REGULAR
+  ADJUSTMENT
+  SPECIAL
+}
+
+enum AccountingPeriodStatus {
+  OPEN
+  CLOSED
+  LOCKED
+}
+
+enum FiscalObligationType {
+  VAT
+  RETEFUENTE
+  RETEIVA
+  RETEICA
+  ELECTRONIC_INVOICE
+  ELECTRONIC_PAYROLL
+  EXOGENA
+}
+
+enum FiscalPeriodicity {
+  MONTHLY
+  BIMONTHLY
+  ANNUAL
+  EVENT_BASED
+}
+
+enum FinancialStatementType {
+  BALANCE_SHEET
+  INCOME_STATEMENT
+  CASH_FLOW
+}
+
+enum FinancialStatementVersion {
+  OFFICIAL
+  DRAFT
+}
+
+// ===== NUEVOS ENUMS =====
+enum PersonKind {
+  NATURAL
+  JURIDICAL
+}
+
+enum IdType {
+  NIT
+  CC
+  PASSPORT
+  OTHER
+}
+
+// ===== NUEVOS ENUMS CONTABLES =====
+enum AccountClass {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum FlowType {
+  NONE
+  AR // Cuentas por cobrar
+  AP // Cuentas por pagar
+}
+
+enum TaxProfile {
+  NA // No aplica
+  IVA_RESPONSABLE // Responsable de IVA (gravado)
+  EXENTO // Exento de IVA (0%)
+  EXCLUIDO // Excluido de IVA (0% sin base gravada)
+}
+
+// ===== NUEVOS ENUMS FISCALES =====
+enum FiscalRegime {
+  NO_RESPONSABLE_IVA
+  RESPONSABLE_IVA
+  SIMPLE
+  ESPECIAL
+}
+
+enum TaxKind {
+  VAT // IVA (débito/crédito)
+  OTHER // otros (si a futuro necesitas)
+}
+
+enum WithholdingType {
+  RTF // ReteFUENTE
+  RIVA // ReteIVA
+  RICA // ReteICA
+}
+
+enum RuleScope {
+  SALES
+  PURCHASES
+  BOTH
+}
+
+// ===== NUEVO ENUM DE REDONDEO (Punto 5) =====
+enum RoundingMode {
+  HALF_UP
+  HALF_EVEN
+  TRUNC
+}
+
+enum DepreciationMethod {
+  NONE
+  STRAIGHT_LINE
+  DECLINING_BALANCE
+}
+
+enum FixedAssetStatus {
+  ACTIVE
+  INACTIVE
+  DISPOSED
+}
+
+enum FixedAssetMovementType {
+  ADDITION
+  IMPROVEMENT
+  TRANSFER
+  DEPRECIATION
+  DISPOSAL
+  REVERSAL
+  ADJUSTMENT
+}
+
+enum DepreciationRunStatus {
+  SCHEDULED
+  POSTED
+  REVERSED
+}
+
+enum ElectronicDocumentType {
+  E_INVOICE
+  E_SUPPORT
+  E_PAYROLL
+  EXOGENA
+}
+
+enum ElectronicDocumentStatus {
+  DRAFT
+  SIGNED
+  READY_FOR_DELIVERY
+  DELIVERED_INTERNAL
+  ACCEPTED
+  REJECTED
+}
+
+enum DianEnvironment {
+  TEST
+  PRODUCTION
+}
+
+/**
+ * =========================
+ * Plan de cuentas / Usuarios / Centros de costo
+ * =========================
+ */
+model CoaAccount {
+  id     Int    @id @default(autoincrement())
+  code   String @unique
+  name   String
+  nature String // 'D' o 'C'
+
+  // Metadatos
+  class              AccountClass
+  current            Boolean      @default(false)
+  reconcilable       Boolean      @default(false)
+  isBank             Boolean      @default(false)
+  isCash             Boolean      @default(false)
+  isDetailed         Boolean      @default(true)
+  parentCode         String?
+  requiresThirdParty Boolean      @default(false)
+  requiresCostCenter Boolean      @default(false)
+  flowType           FlowType     @default(NONE)
+  taxProfile         TaxProfile   @default(NA)
+  vatRate            Decimal?     @db.Decimal(5, 2)
+  defaultCurrency    String?      @db.VarChar(3)
+
+  // back-relations
+  journalLines JournalLine[]
+
+  @@index([class])
+  @@index([current])
+  @@index([reconcilable])
+  @@index([isBank])
+  @@index([isCash])
+  @@index([requiresThirdParty])
+  @@index([requiresCostCenter])
+  @@index([flowType])
+  @@index([taxProfile])
+  @@index([parentCode])
+}
+
+model CostCenter {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  active    Boolean  @default(true)
+  isReportable Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // back-relations
+  journalLines              JournalLine[]
+  fixedAssets               FixedAsset[]
+  defaultForAssetCategories FixedAssetCategory[]
+  fixedAssetMovements       FixedAssetMovement[]
+  employees                 EmployeeProfile[]
+  payrollRunLines           PayrollRunLine[]
+
+  @@index([active])
+  @@index([isReportable])
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // === LADO OPUESTO PARA POS (FIX del error) ===
+  cashSessions CashSession[]
+  roles        UserRole[]
+}
+
+model UserRole {
+  id        Int          @id @default(autoincrement())
+  userId    Int
+  role      UserRoleCode
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([role])
+}
+
+/**
+ * =========================
+ * Terceros
+ * =========================
+ */
+model ThirdParty {
+  id   Int       @id @default(autoincrement())
+  type PartyType
+  roles PartyType[] @default([])
+
+  // Perfil fiscal
+  personKind   PersonKind @default(NATURAL)
+  idType       IdType     @default(CC)
+  legalRepName String?
+
+  responsibilities String[] @default([])
+
+  document         String?  @unique
+  name             String
+  email            String?
+  phone            String?
+  address          String?
+  city             String?
+  paymentTermsDays Int?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // ===== NUEVOS CAMPOS FISCALES =====
+  fiscalRegime       FiscalRegime @default(NO_RESPONSABLE_IVA)
+  isWithholdingAgent Boolean      @default(false) // agente retenedor
+  ciiuCode           String? // código CIIU
+  municipalityCode   String? // para ICA (DIVIPOLA/DANE)
+
+  // ===== NUEVOS (Punto 5): Parametrización fiscal por tercero =====
+  taxProfile   TaxProfile @default(NA) // perfil de IVA del tercero
+  defaultVatId Int? // FK opcional para forzar tarifa
+  defaultVat   Tax?       @relation(fields: [defaultVatId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  // Parametrización contable
+  receivableAccountCode String?
+  payableAccountCode    String?
+  clientReceivableAccountCode  String?
+  providerPayableAccountCode   String?
+  employeePayableAccountCode   String?
+  otherReceivableAccountCode   String?
+  otherPayableAccountCode      String?
+
+  // back-relations
+  salesInvoices      SalesInvoice[]
+  accountsReceivable AccountsReceivable[]
+  journalLines       JournalLine[]
+  purchaseInvoices   PurchaseInvoice[]
+  accountsPayable    AccountsPayable[]
+  cashReceipts       CashReceipt[]
+  vendorPayments     VendorPayment[]
+  salesCreditNotes   SalesCreditNote[]
+  fixedAssets        FixedAsset[]
+  fixedAssetMovements FixedAssetMovement[]
+  employeeProfile    EmployeeProfile?
+  employeeAffiliations EmployeeAffiliation[]
+  payrollRunLines    PayrollRunLine[]
+
+  @@index([type])
+  @@index([name])
+  @@index([active])
+  @@index([receivableAccountCode])
+  @@index([payableAccountCode])
+  @@index([fiscalRegime])
+  @@index([isWithholdingAgent])
+  @@index([ciiuCode])
+  @@index([municipalityCode])
+  @@index([taxProfile])
+  @@index([defaultVatId])
+}
+
+model EmployeeProfile {
+  id                  Int              @id @default(autoincrement())
+  thirdPartyId        Int              @unique
+  status              EmploymentStatus @default(ACTIVE)
+  jobTitle            String?
+  department          String?
+  hireDate            DateTime?
+  terminationDate     DateTime?
+  defaultCostCenterId Int?
+  payableAccountCode  String?
+  notes               String?
+  metadata            Json?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  thirdParty         ThirdParty  @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  defaultCostCenter  CostCenter? @relation(fields: [defaultCostCenterId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  contracts          EmploymentContract[]
+  payrollRuns        PayrollRun[]
+  affiliations       EmployeeAffiliation[]
+
+  @@index([status])
+  @@index([jobTitle])
+  @@index([department])
+  @@index([defaultCostCenterId])
+}
+
+model EmploymentContract {
+  id              Int                    @id @default(autoincrement())
+  employeeId      Int
+  code            String?                @unique
+  contractType    EmploymentContractType
+  startDate       DateTime
+  endDate         DateTime?
+  salaryAmount    Decimal                @db.Decimal(14, 2)
+  salaryFrequency PayrollFrequency       @default(MONTHLY)
+  workingHours    String?
+  probationEnd    DateTime?
+  notes           String?
+  isActive        Boolean                @default(true)
+  metadata        Json?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  employee EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([employeeId])
+  @@index([contractType])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([isActive])
+}
+
+model EmployeeAffiliation {
+  id           Int                     @id @default(autoincrement())
+  employeeId   Int
+  kind         EmployeeAffiliationType
+  thirdPartyId Int
+  startDate    DateTime?
+  endDate      DateTime?
+  notes        String?
+  metadata     Json?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  employee   EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  thirdParty ThirdParty      @relation(fields: [thirdPartyId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([employeeId, kind, thirdPartyId])
+  @@index([kind])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model PayrollRun {
+  id                    Int              @id @default(autoincrement())
+  employeeId            Int
+  periodStart           DateTime
+  periodEnd             DateTime
+  issuedAt              DateTime         @default(now())
+  status                PayrollRunStatus @default(DRAFT)
+  grossAmount           Decimal          @db.Decimal(14, 2)
+  deductionsAmount      Decimal          @db.Decimal(14, 2) @default(0)
+  employerContribAmount Decimal          @db.Decimal(14, 2) @default(0)
+  provisionsAmount      Decimal          @db.Decimal(14, 2) @default(0)
+  netAmount             Decimal          @db.Decimal(14, 2)
+  journalEntryId        Int?
+  paymentEntryId        Int?
+  description           String?
+  metadata              Json?
+  createdById           Int?
+  postedAt              DateTime?
+  canceledAt            DateTime?
+
+  employee     EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  journalEntry JournalEntry?   @relation(fields: [journalEntryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  paymentEntry JournalEntry?   @relation("PayrollPaymentEntry", fields: [paymentEntryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  lines        PayrollRunLine[]
+
+  @@unique([employeeId, periodStart, periodEnd])
+  @@index([employeeId])
+  @@index([status])
+  @@index([periodStart])
+  @@index([periodEnd])
+  @@index([journalEntryId])
+  @@index([paymentEntryId])
+}
+
+model PayrollRunLine {
+  id            Int                  @id @default(autoincrement())
+  payrollRunId  Int
+  componentCode String
+  componentName String?
+  kind          PayrollComponentKind
+  amount        Decimal              @db.Decimal(14, 2)
+  baseAmount    Decimal?             @db.Decimal(14, 2)
+  percentage    Decimal?             @db.Decimal(8, 4)
+  accountCode   String
+  thirdPartyId  Int?
+  costCenterId  Int?
+  metadata      Json?
+
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  thirdParty ThirdParty? @relation(fields: [thirdPartyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  costCenter CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([payrollRunId])
+  @@index([kind])
+  @@index([accountCode])
+  @@index([thirdPartyId])
+  @@index([costCenterId])
+}
+model Municipality {
+  code            String   @id
+  departmentCode  String
+  departmentName  String
+  name            String
+  type            String
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([departmentCode])
+  @@index([departmentName])
+  @@index([name])
+}
+
+/**
+ * =========================
+ * Catálogo / Inventario
+ * =========================
+ */
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  items Item[]
+
+  // Parametrización contable por categoría (fallback)
+  incomeAccountCode    String?
+  expenseAccountCode   String?
+  inventoryAccountCode String?
+  taxAccountCode       String?
+
+  // ===== Perfil fiscal por categoría =====
+  taxProfile   TaxProfile @default(NA)
+  defaultTaxId Int?
+  defaultTax   Tax?       @relation(fields: [defaultTaxId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([incomeAccountCode])
+  @@index([expenseAccountCode])
+  @@index([inventoryAccountCode])
+  @@index([taxAccountCode])
+  @@index([taxProfile])
+  @@index([defaultTaxId])
+}
+
+model Item {
+  id          Int      @id @default(autoincrement())
+  sku         String   @unique
+  // === NUEVO: código de barras para POS ===
+  barcode     String?  @unique
+  name        String
+  type        ItemType
+  unit        String   @default("UN") // legado UI
+  unitKind    UnitKind @default(COUNT)
+  baseUnit    Unit     @default(UN)
+  displayUnit Unit     @default(UN)
+
+  // Precios
+  priceMin Decimal? @db.Decimal(14, 2)
+  priceMid Decimal? @db.Decimal(14, 2)
+  priceMax Decimal? @db.Decimal(14, 2)
+
+  price     Decimal? @db.Decimal(14, 2)
+  ivaPct    Int?
+  defaultDiscountPct Int?
+  costAvg   Decimal  @default(0) @db.Decimal(14, 6)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // categoría
+  categoryId Int?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  // Parametrización contable por ítem
+  incomeAccountCode    String?
+  expenseAccountCode   String?
+  inventoryAccountCode String?
+  taxAccountCode       String?
+  purchaseTaxAccountCode String?
+
+  // ===== Perfil fiscal por ítem =====
+  taxProfile   TaxProfile @default(NA)
+  defaultTaxId Int?
+  defaultTax   Tax?       @relation(fields: [defaultTaxId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  // back-relations
+  stockMoves           StockMove[]
+  layers               StockLayer[]
+  salesInvoiceLines    SalesInvoiceLine[]
+  purchaseInvoiceLines PurchaseInvoiceLine[]
+  salesCreditNoteLines SalesCreditNoteLine[]
+  consumptions         StockConsumption[]    @relation("ItemConsumptions")
+
+  // Recetas (BOM)
+  outputRecipe      Recipe?           @relation("RecipeOutput")
+  usedAsComponentIn RecipeComponent[] @relation("ItemRecipeComponents")
+
+  @@index([type])
+  @@index([active])
+  @@index([name])
+  @@index([categoryId])
+  @@index([incomeAccountCode])
+  @@index([expenseAccountCode])
+  @@index([inventoryAccountCode])
+  @@index([taxAccountCode])
+  @@index([purchaseTaxAccountCode])
+  @@index([taxProfile])
+  @@index([defaultTaxId])
+}
+
+model Warehouse {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // back-relations
+  stockMoves   StockMove[]
+  layers       StockLayer[]
+  consumptions StockConsumption[] @relation("WarehouseConsumptions")
+}
+
+model StockMove {
+  id          Int           @id @default(autoincrement())
+  itemId      Int
+  warehouseId Int
+  type        StockMoveType
+  adjustmentReason StockAdjustmentReason @default(ACCOUNTING)
+  qty         Decimal       @db.Decimal(20, 6)
+  uom         Unit          @default(UN)
+  unitCost    Decimal       @db.Decimal(14, 6)
+  refType     String?
+  refId       Int?
+  note        String?
+  ts          DateTime      @default(now())
+
+  item      Item      @relation(fields: [itemId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  // capas creadas por ESTE movimiento de ENTRADA
+  layersCreated StockLayer[] @relation("MoveInLayer")
+
+  // consumos ligados a ESTE movimiento de SALIDA
+  consumptions StockConsumption[] @relation("MoveOutConsumption")
+
+  @@index([itemId, warehouseId])
+  @@index([ts])
+  @@index([type])
+}
+
+model StockLayer {
+  id             Int       @id @default(autoincrement())
+  itemId         Int
+  warehouseId    Int
+  remainingQty   Decimal   @db.Decimal(20, 6)
+  unitCost       Decimal   @db.Decimal(14, 6)
+  createdAt      DateTime  @default(now())
+  expiryDate     DateTime?
+  lotCode        String?
+  productionDate DateTime?
+
+  // FK opcional al movimiento de ENTRADA que originó la capa
+  moveInId Int?
+  moveIn   StockMove? @relation("MoveInLayer", fields: [moveInId], references: [id])
+
+  item      Item      @relation(fields: [itemId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  // back-relations a consumos
+  consumptions StockConsumption[] @relation("LayerConsumptions")
+
+  @@index([itemId, warehouseId])
+  @@index([itemId, warehouseId, expiryDate])
+  @@index([itemId, warehouseId, lotCode])
+}
+
+model StockConsumption {
+  id          Int      @id @default(autoincrement())
+  moveOutId   Int
+  layerId     Int
+  itemId      Int
+  warehouseId Int
+  qty         Decimal  @db.Decimal(20, 6)
+  unitCost    Decimal  @db.Decimal(14, 6)
+  ts          DateTime @default(now())
+
+  moveOut   StockMove  @relation("MoveOutConsumption", fields: [moveOutId], references: [id])
+  layer     StockLayer @relation("LayerConsumptions", fields: [layerId], references: [id])
+  item      Item       @relation("ItemConsumptions", fields: [itemId], references: [id])
+  warehouse Warehouse  @relation("WarehouseConsumptions", fields: [warehouseId], references: [id])
+
+  @@index([moveOutId])
+  @@index([layerId])
+  @@index([itemId, warehouseId])
+}
+
+/**
+ * =========================
+ * Recetas (BOM)
+ * =========================
+ */
+model Recipe {
+  id            Int      @id @default(autoincrement())
+  outputItemId  Int      @unique
+  outputQtyBase Decimal  @default(1) @db.Decimal(20, 6)
+  outputUom     Unit?
+  note          String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Ítem producido por esta receta
+  outputItem Item @relation("RecipeOutput", fields: [outputItemId], references: [id])
+
+  // Componentes
+  components RecipeComponent[]
+
+  @@index([active])
+}
+
+model RecipeComponent {
+  id            Int     @id @default(autoincrement())
+  recipeId      Int
+  componentId   Int
+  qtyBasePerOut Decimal @db.Decimal(20, 6)
+  optional      Boolean @default(false)
+  wastePct      Float   @default(0)
+  note          String?
+  componentUom  Unit    @default(UN)
+
+  recipe    Recipe @relation(fields: [recipeId], references: [id])
+  component Item   @relation("ItemRecipeComponents", fields: [componentId], references: [id])
+
+  @@index([recipeId])
+  @@index([componentId])
+}
+
+/**
+ * =========================
+ * Ventas (CxC)
+ * =========================
+ */
+model SalesInvoice {
+  id           Int           @id @default(autoincrement())
+  number       Int           @unique
+  thirdPartyId Int
+  issueDate    DateTime      @default(now())
+  dueDate      DateTime?
+  paymentType  PaymentType
+  status       InvoiceStatus @default(ISSUED)
+
+  // Totales clásicos (compat)
+  subtotal Decimal @default(0) @db.Decimal(14, 2)
+  tax      Decimal @default(0) @db.Decimal(14, 2)
+  total    Decimal @default(0) @db.Decimal(14, 2)
+
+  // ===== NUEVOS TOTALES =====
+  taxBase           Decimal  @default(0) @db.Decimal(14, 2) // base gravable consolidada
+  withholdingTotal  Decimal  @default(0) @db.Decimal(14, 2) // total retenciones (RF/RIVA/RICA)
+  downPaymentAmount Decimal? @db.Decimal(14, 2)
+  creditMarkupPct   Int?
+  note              String?
+
+  // plan de cuotas (opcional)
+  installments            Int?
+  installmentFrequency    InstallmentFrequency?
+  firstInstallmentDueDate DateTime?
+
+  thirdParty         ThirdParty          @relation(fields: [thirdPartyId], references: [id])
+  lines              SalesInvoiceLine[]
+  ar                 AccountsReceivable?
+  receiptAllocations ReceiptAllocation[]
+  creditNotes        SalesCreditNote[]
+
+  // ===== Relaciones a impuestos/retenciones =====
+  taxes        InvoiceTax[]
+  withholdings InvoiceWithholding[]
+  electronicDocumentId Int?      @unique
+  electronicDocument   ElectronicDocument? @relation("SalesInvoiceElectronic", fields: [electronicDocumentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([thirdPartyId])
+  @@index([issueDate])
+  @@index([status])
+  @@index([electronicDocumentId])
+}
+
+model SalesInvoiceLine {
+  id           Int     @id @default(autoincrement())
+  invoiceId    Int
+  itemId       Int
+  qty          Decimal @db.Decimal(20, 6)
+  // Unidad en la que se registró la línea (informativa)
+  uom          Unit?   @default(UN)
+  unitPrice    Decimal @db.Decimal(14, 6)
+  discountPct  Int?
+  vatPct       Int? // compat
+  lineSubtotal Decimal @db.Decimal(14, 2)
+  lineVat      Decimal @db.Decimal(14, 2)
+  lineTotal    Decimal @db.Decimal(14, 2)
+
+  // ===== referencia a Tax =====
+  taxId Int?
+  tax   Tax? @relation(fields: [taxId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  invoice SalesInvoice @relation(fields: [invoiceId], references: [id])
+  item    Item         @relation(fields: [itemId], references: [id])
+
+  // back-relations
+  taxes        InvoiceTax[]
+  withholdings InvoiceWithholding[]
+
+  @@index([invoiceId])
+  @@index([taxId])
+}
+
+model AccountsReceivable {
+  id           Int     @id @default(autoincrement())
+  thirdPartyId Int
+  invoiceId    Int     @unique
+  balance      Decimal @default(0) @db.Decimal(14, 2)
+
+  thirdParty ThirdParty   @relation(fields: [thirdPartyId], references: [id])
+  invoice    SalesInvoice @relation(fields: [invoiceId], references: [id])
+
+  installments Installment[]
+
+  @@index([thirdPartyId])
+}
+
+/**
+ * =========================
+ * Diario contable
+ * =========================
+ */
+model JournalEntry {
+  id   Int      @id @default(autoincrement())
+  date DateTime @default(now())
+
+  // Origen (idempotencia)
+  sourceType String
+  sourceId   Int
+
+  // Metainfo contable
+  periodId  Int?
+  journalId Int?
+  number    Int?
+  status    String @default("POSTED") // DRAFT | POSTED | REVERSED
+
+  // Moneda
+  companyCurrency String   @default("COP")
+  currency        String?
+  fxRate          Decimal? @db.Decimal(14, 6)
+
+  // Self-relation 1:1
+  reversalId Int? @unique
+
+  description String?
+  // Optional link to the payment method used when the entry represents a payment
+  paymentMethodId Int?
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  lines       JournalLine[]
+
+  // Relaciones
+  period  AccountingPeriod? @relation(fields: [periodId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  journal Journal?          @relation(fields: [journalId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  reversedBy JournalEntry? @relation("EntryReversal", fields: [reversalId], references: [id])
+  reverses   JournalEntry? @relation("EntryReversal")
+  fixedAssetMovements   FixedAssetMovement[]
+  fixedAssetRuns        FixedAssetDepreciationRun[] @relation("DepreciationRunJournal")
+  fixedAssetRunReversals FixedAssetDepreciationRun[] @relation("DepreciationRunReversal")
+  payrollRuns           PayrollRun[]
+  payrollPaymentRuns    PayrollRun[] @relation("PayrollPaymentEntry")
+
+  @@unique([sourceType, sourceId])
+  @@unique([periodId, journalId, number])
+  @@index([date])
+  @@index([status])
+  @@index([journalId])
+  @@index([periodId])
+}
+
+model JournalLine {
+  id           Int     @id @default(autoincrement())
+  entryId      Int
+  accountId    Int?
+  accountCode  String
+  thirdPartyId Int?
+  costCenterId Int?
+  debit        Decimal @default(0) @db.Decimal(14, 2)
+  credit       Decimal @default(0) @db.Decimal(14, 2)
+  description  String?
+
+  // Conciliación bancaria
+  reconciled   Boolean   @default(false)
+  bankRef      String?
+  reconciledAt DateTime?
+
+  // Moneda
+  companyCurrency String   @default("COP")
+  currency        String?
+  fxRate          Decimal? @db.Decimal(14, 6)
+  amountFunc      Decimal? @db.Decimal(14, 2)
+
+  entry      JournalEntry @relation(fields: [entryId], references: [id])
+  account    CoaAccount?  @relation(fields: [accountId], references: [id])
+  thirdParty ThirdParty?  @relation(fields: [thirdPartyId], references: [id])
+  costCenter CostCenter?  @relation(fields: [costCenterId], references: [id])
+
+  // back-relations (conciliación)
+  matchedBankLines BankStatementLine[] @relation("MatchedJournalLine")
+
+  @@index([entryId])
+  @@index([accountCode])
+  @@index([thirdPartyId])
+  @@index([costCenterId])
+  @@index([reconciled])
+  @@index([bankRef])
+}
+
+/**
+ * =========================
+ * Compras (CxP)
+ * =========================
+ */
+model PurchaseInvoice {
+  id           Int            @id @default(autoincrement())
+  number       Int            @unique
+  thirdPartyId Int
+  issueDate    DateTime       @default(now())
+  dueDate      DateTime?
+  paymentType  PaymentType
+  status       PurchaseStatus @default(ISSUED)
+
+  // Totales clásicos (compat)
+  subtotal Decimal @default(0) @db.Decimal(14, 2)
+  tax      Decimal @default(0) @db.Decimal(14, 2)
+  total    Decimal @default(0) @db.Decimal(14, 2)
+
+  // ===== NUEVOS TOTALES =====
+  taxBase          Decimal @default(0) @db.Decimal(14, 2)
+  withholdingTotal Decimal @default(0) @db.Decimal(14, 2)
+
+  note String?
+
+  // plan de cuotas (opcional)
+  installments            Int?
+  installmentFrequency    InstallmentFrequency?
+  firstInstallmentDueDate DateTime?
+
+  thirdParty         ThirdParty            @relation(fields: [thirdPartyId], references: [id])
+  lines              PurchaseInvoiceLine[]
+  ap                 AccountsPayable?
+  paymentAllocations PaymentAllocation[]
+
+  // ===== Relaciones a impuestos/retenciones =====
+  taxes        InvoiceTax[]
+  withholdings InvoiceWithholding[]
+
+  @@index([thirdPartyId])
+  @@index([issueDate])
+  @@index([status])
+}
+
+model PurchaseInvoiceLine {
+  id           Int     @id @default(autoincrement())
+  invoiceId    Int
+  itemId       Int
+  qty          Decimal @db.Decimal(20, 6)
+  // Unidad en la que se registró la línea (informativa)
+  uom          Unit?   @default(UN)
+  unitCost     Decimal @db.Decimal(14, 6)
+  vatPct       Int?
+  lineSubtotal Decimal @db.Decimal(14, 2)
+  lineVat      Decimal @db.Decimal(14, 2)
+  lineTotal    Decimal @db.Decimal(14, 2)
+
+  // ===== referencia a Tax =====
+  taxId Int?
+  tax   Tax? @relation(fields: [taxId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  invoice PurchaseInvoice @relation(fields: [invoiceId], references: [id])
+  item    Item            @relation(fields: [itemId], references: [id])
+
+  // back-relations
+  taxes        InvoiceTax[]
+  withholdings InvoiceWithholding[]
+
+  @@index([invoiceId])
+  @@index([taxId])
+}
+
+model AccountsPayable {
+  id           Int     @id @default(autoincrement())
+  thirdPartyId Int
+  invoiceId    Int     @unique
+  balance      Decimal @default(0) @db.Decimal(14, 2)
+
+  thirdParty ThirdParty      @relation(fields: [thirdPartyId], references: [id])
+  invoice    PurchaseInvoice @relation(fields: [invoiceId], references: [id])
+
+  installments Installment[]
+
+  @@index([thirdPartyId])
+}
+
+/**
+ * =========================
+ * Cuotas (Installments)
+ * =========================
+ */
+model Installment {
+  id           Int               @id @default(autoincrement())
+  receivableId Int?
+  payableId    Int?
+  number       Int
+  dueDate      DateTime
+  amount       Decimal           @db.Decimal(14, 2)
+  paidAmount   Decimal           @default(0) @db.Decimal(14, 2)
+  status       InstallmentStatus @default(PENDING)
+
+  receivable AccountsReceivable? @relation(fields: [receivableId], references: [id])
+  payable    AccountsPayable?    @relation(fields: [payableId], references: [id])
+
+  // Lados inversos nombrados
+  receiptAllocations ReceiptAllocation[] @relation("InstallmentToReceiptAllocation")
+  paymentAllocations PaymentAllocation[] @relation("InstallmentToPaymentAllocation")
+
+  @@index([receivableId])
+  @@index([payableId])
+}
+
+/**
+ * =========================
+ * Tesorería — Catálogo de métodos de pago
+ * =========================
+ */
+model PaymentMethod {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  accountName   String?
+  accountNumber String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Parametrización contable
+  cashAccountCode String?
+  bankAccountCode String?
+
+  // back-relations
+  receipts  CashReceipt[]
+  vpayments VendorPayment[]
+  journalEntries JournalEntry[]
+
+  @@index([active])
+  @@index([accountNumber])
+  @@index([cashAccountCode])
+  @@index([bankAccountCode])
+}
+
+/**
+ * =========================
+ * Tesorería (cobros/pagos)
+ * =========================
+ */
+model CashReceipt {
+  id           Int      @id @default(autoincrement())
+  thirdPartyId Int
+  date         DateTime @default(now())
+  total        Decimal  @default(0) @db.Decimal(14, 2)
+  note         String?
+
+  // método
+  methodId Int?
+  method   PaymentMethod? @relation(fields: [methodId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  purchaseTaxAccountCode String? // Added purchase tax account code
+  thirdParty  ThirdParty          @relation(fields: [thirdPartyId], references: [id])
+  allocations ReceiptAllocation[]
+
+  @@index([thirdPartyId, date])
+  @@index([methodId])
+}
+
+model ReceiptAllocation {
+  id            Int     @id @default(autoincrement())
+  receiptId     Int
+  invoiceId     Int
+  amount        Decimal @db.Decimal(14, 2)
+  installmentId Int?
+
+  receipt     CashReceipt  @relation(fields: [receiptId], references: [id])
+  invoice     SalesInvoice @relation(fields: [invoiceId], references: [id])
+  installment Installment? @relation("InstallmentToReceiptAllocation", fields: [installmentId], references: [id])
+
+  @@index([invoiceId])
+  @@index([installmentId])
+}
+
+model VendorPayment {
+  id           Int      @id @default(autoincrement())
+  thirdPartyId Int
+  date         DateTime @default(now())
+  total        Decimal  @default(0) @db.Decimal(14, 2)
+  note         String?
+
+  // método
+  methodId Int?
+  method   PaymentMethod? @relation(fields: [methodId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  thirdParty  ThirdParty          @relation(fields: [thirdPartyId], references: [id])
+  allocations PaymentAllocation[]
+
+  @@index([thirdPartyId, date])
+  @@index([methodId])
+}
+
+model PaymentAllocation {
+  id            Int     @id @default(autoincrement())
+  paymentId     Int
+  invoiceId     Int
+  amount        Decimal @db.Decimal(14, 2)
+  installmentId Int?
+
+  payment     VendorPayment   @relation(fields: [paymentId], references: [id])
+  invoice     PurchaseInvoice @relation(fields: [invoiceId], references: [id])
+  installment Installment?    @relation("InstallmentToPaymentAllocation", fields: [installmentId], references: [id])
+
+  @@index([invoiceId])
+  @@index([installmentId])
+}
+
+/**
+ * =========================
+ * Notas Crédito Venta
+ * =========================
+ */
+model SalesCreditNote {
+  id           Int           @id @default(autoincrement())
+  number       Int           @unique
+  invoiceId    Int
+  thirdPartyId Int
+  issueDate    DateTime      @default(now())
+  status       InvoiceStatus @default(ISSUED)
+  reason       String?
+  subtotal     Decimal       @default(0) @db.Decimal(14, 2)
+  tax          Decimal       @default(0) @db.Decimal(14, 2)
+  total        Decimal       @default(0) @db.Decimal(14, 2)
+
+  invoice    SalesInvoice          @relation(fields: [invoiceId], references: [id])
+  thirdParty ThirdParty            @relation(fields: [thirdPartyId], references: [id])
+  lines      SalesCreditNoteLine[]
+
+  @@index([invoiceId])
+  @@index([thirdPartyId])
+  @@index([issueDate])
+  @@index([status])
+}
+
+model SalesCreditNoteLine {
+  id           Int     @id @default(autoincrement())
+  creditNoteId Int
+  itemId       Int
+  qty          Decimal @db.Decimal(20, 6)
+  unitPrice    Decimal @db.Decimal(14, 6)
+  vatPct       Int?
+  lineSubtotal Decimal @db.Decimal(14, 2)
+  lineVat      Decimal @db.Decimal(14, 2)
+  lineTotal    Decimal @db.Decimal(14, 2)
+
+  creditNote SalesCreditNote @relation(fields: [creditNoteId], references: [id])
+  item       Item            @relation(fields: [itemId], references: [id])
+
+  @@index([creditNoteId])
+}
+
+/**
+ * =========================
+ * Periodos contables
+ * =========================
+ */
+model AccountingPeriod {
+  id             Int                     @id @default(autoincrement())
+  year           Int
+  month          Int // 1..12, usar 13 para ajustes si type = SPECIAL/ADJUSTMENT
+  start          DateTime
+  end            DateTime
+  status         AccountingPeriodStatus  @default(OPEN)
+  type           AccountingPeriodType    @default(REGULAR)
+  label          String?                 @db.VarChar(64)
+  closedAt       DateTime?
+  reopenedAt     DateTime?
+  reopenedById   Int?
+  lockedAt       DateTime?
+  lockedById     Int?
+  lockReason     String?
+  requiredRole   String?                 @db.VarChar(64)
+  allowBackPostUntil DateTime?
+
+  // back-relation hacia JournalEntry.period
+  entries JournalEntry[]
+
+  @@unique([year, month, type])
+  @@index([status])
+  @@index([type])
+}
+
+model DeferredTaxProvision {
+  id                Int      @id @default(autoincrement())
+  year              Int
+  description       String?
+  debitAccountCode  String
+  creditAccountCode String
+  amount            Decimal  @db.Decimal(14, 2)
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([year])
+  @@index([active])
+}
+
+model FinancialStatementSnapshot {
+  id        Int                         @id @default(autoincrement())
+  year      Int
+  statement FinancialStatementType
+  version   FinancialStatementVersion  @default(OFFICIAL)
+  label     String?                    @db.VarChar(64)
+  accountCode String
+  balance   Decimal                    @db.Decimal(16, 2)
+  createdAt DateTime                   @default(now())
+  updatedAt DateTime                   @updatedAt
+
+  @@unique([year, statement, version, accountCode])
+  @@index([statement])
+  @@index([version])
+}
+
+/**
+ * =========================
+ * Auditoría
+ * =========================
+ */
+model AuditLog {
+  id       Int      @id @default(autoincrement())
+  entity   String
+  entityId Int
+  // CREATE | UPDATE | DELETE | POST | REVERSE | CLOSE_PERIOD | OPEN_PERIOD | MAP_CHANGE
+  action   String
+  userId   Int?
+  ip       String?
+  ts       DateTime @default(now())
+  changes  Json?
+
+  @@index([entity, entityId])
+  @@index([ts])
+  @@index([action])
+}
+
+/**
+ * =========================
+ * Diarios y numeradores
+ * =========================
+ */
+
+/// Catálogo de diarios contables
+model Journal {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique
+  name     String
+  isActive Boolean @default(true)
+
+  entries   JournalEntry[]
+  sequences JournalSequence[]
+
+  @@index([isActive])
+}
+
+//// Secuencia de numeración por (año, mes, diario)
+model JournalSequence {
+  id        Int @id @default(autoincrement())
+  year      Int
+  month     Int
+  journalId Int
+  current   Int @default(0)
+
+  journal Journal @relation(fields: [journalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([year, month, journalId])
+  @@index([journalId])
+}
+
+/**
+ * =========================
+ * Versionado de mapa contable
+ * =========================
+ */
+model AccountsMap {
+  id       Int      @id @default(autoincrement())
+  ts       DateTime @default(now())
+  authorId Int?
+  json     Json
+}
+
+/**
+ * =========================
+ * ======= NUEVOS ==========
+ * =========================
+ */
+
+// Catálogo de impuestos (principalmente IVA)
+model Tax {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique // p.e. IVA19, IVA5
+  name      String
+  kind      TaxKind  @default(VAT)
+  ratePct   Decimal  @db.Decimal(5, 2) // 19.00, 5.00, etc.
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // back-relations
+  categories            Category[] // Category.defaultTax
+  items                 Item[] // Item.defaultTax
+  salesLines            SalesInvoiceLine[] // SalesInvoiceLine.tax
+  purchLines            PurchaseInvoiceLine[] // PurchaseInvoiceLine.tax
+  invoiceTaxes          InvoiceTax[] // InvoiceTax.tax
+  // Nuevo back-relation a terceros que lo usan como default
+  thirdPartiesDefault   ThirdParty[]
+  // Back-relations a FiscalSettings (múltiples FKs nombradas)
+  fiscalSettingsAsVat19 FiscalSettings[]      @relation("FS_VAT19")
+  fiscalSettingsAsVat5  FiscalSettings[]      @relation("FS_VAT5")
+  fiscalSettingsAsVat0  FiscalSettings[]      @relation("FS_VAT0")
+
+  @@index([active])
+  @@index([kind])
+}
+
+// Reglas de retención (reteFUENTE, reteIVA, reteICA)
+model WithholdingRule {
+  id               Int             @id @default(autoincrement())
+  type             WithholdingType
+  scope            RuleScope       @default(BOTH) // aplica a ventas, compras o ambos
+  ratePct          Decimal         @db.Decimal(6, 4) // usa 1.5000 para 1.5%
+  minBase          Decimal?        @db.Decimal(14, 2) // base mínima
+  fixedAmount      Decimal?        @db.Decimal(14, 2) // si aplica
+  // Segmentación
+  ciiuCode         String? // actividad económica
+  municipalityCode String? // para ICA por municipio
+  onlyForAgents    Boolean         @default(false) // si solo aplica si la contraparte es agente retenedor
+  active           Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  // back-relations
+  applications InvoiceWithholding[]
+  segments     WithholdingSegment[]
+
+  @@index([type])
+  @@index([scope])
+  @@index([active])
+  @@index([ciiuCode])
+  @@index([municipalityCode])
+  @@index([onlyForAgents])
+}
+
+model WithholdingSegment {
+  id               Int              @id @default(autoincrement())
+  ruleId           Int
+  municipalityCode String?
+  departmentCode   String?
+  validFrom        DateTime?
+  validTo          DateTime?
+  minBase          Decimal?         @db.Decimal(14, 2)
+  maxBase          Decimal?         @db.Decimal(14, 2)
+  ratePct          Decimal?         @db.Decimal(6, 4)
+  fixedAmount      Decimal?         @db.Decimal(14, 2)
+
+  rule WithholdingRule @relation(fields: [ruleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([ruleId])
+  @@index([municipalityCode])
+  @@index([departmentCode])
+  @@index([validFrom])
+  @@index([validTo])
+}
+
+// Impuestos por factura y/o por línea (IVA consolidado o por línea)
+model InvoiceTax {
+  id        Int      @id @default(autoincrement())
+  taxId     Int
+  // Métricas
+  base      Decimal  @db.Decimal(14, 2)
+  ratePct   Decimal  @db.Decimal(6, 4) // 19.0000, 5.0000
+  amount    Decimal  @db.Decimal(14, 2)
+  included  Boolean  @default(false) // si el precio incluye IVA
+  createdAt DateTime @default(now())
+
+  // Relaciones a factura (venta o compra) y/o línea
+  salesInvoiceId        Int?
+  purchaseInvoiceId     Int?
+  salesInvoiceLineId    Int?
+  purchaseInvoiceLineId Int?
+
+  tax             Tax                  @relation(fields: [taxId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  salesInvoice    SalesInvoice?        @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  purchaseInvoice PurchaseInvoice?     @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  salesLine       SalesInvoiceLine?    @relation(fields: [salesInvoiceLineId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  purchaseLine    PurchaseInvoiceLine? @relation(fields: [purchaseInvoiceLineId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([salesInvoiceId])
+  @@index([purchaseInvoiceId])
+  @@index([salesInvoiceLineId])
+  @@index([purchaseInvoiceLineId])
+  @@index([taxId])
+}
+
+// Retenciones por factura y/o por línea (RF, RIVA, RICA)
+model InvoiceWithholding {
+  id        Int             @id @default(autoincrement())
+  type      WithholdingType
+  ruleId    Int?
+  base      Decimal         @db.Decimal(14, 2)
+  ratePct   Decimal?        @db.Decimal(6, 4) // nulo si se usa fixedAmount
+  amount    Decimal         @db.Decimal(14, 2)
+  createdAt DateTime        @default(now())
+
+  // Relaciones a factura (venta o compra) y/o línea
+  salesInvoiceId        Int?
+  purchaseInvoiceId     Int?
+  salesInvoiceLineId    Int?
+  purchaseInvoiceLineId Int?
+
+  rule            WithholdingRule?     @relation(fields: [ruleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  salesInvoice    SalesInvoice?        @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  purchaseInvoice PurchaseInvoice?     @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  salesLine       SalesInvoiceLine?    @relation(fields: [salesInvoiceLineId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  purchaseLine    PurchaseInvoiceLine? @relation(fields: [purchaseInvoiceLineId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([type])
+  @@index([ruleId])
+  @@index([salesInvoiceId])
+  @@index([purchaseInvoiceId])
+  @@index([salesInvoiceLineId])
+  @@index([purchaseInvoiceLineId])
+}
+
+model FiscalCalendar {
+  id               Int                 @id @default(autoincrement())
+  year             Int
+  obligation       FiscalObligationType
+  periodicity      FiscalPeriodicity
+  regime           FiscalRegime?       @default(NO_RESPONSABLE_IVA)
+  municipalityCode String?
+  departmentCode   String?
+  notes            String?
+  updatedAt        DateTime? @updatedAt
+
+  events FiscalCalendarEvent[]
+
+  @@unique([year, obligation, regime, municipalityCode, departmentCode], name: "FiscalCalendar_scope_key")
+  @@index([year])
+  @@index([obligation])
+}
+
+model FiscalCalendarEvent {
+  id          Int              @id @default(autoincrement())
+  calendarId  Int
+  periodLabel String
+  dueDate     DateTime
+  cutoffDate  DateTime?
+  dianForm    String?
+  channel     String?
+
+  calendar FiscalCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([calendarId])
+  @@index([dueDate])
+}
+
+/**
+ * =========================
+ * ======= (Punto 4) Conciliación bancaria
+ * =========================
+ */
+
+// Encabezado de extracto bancario importado (CSV/Excel)
+model BankStatement {
+  id               Int       @id @default(autoincrement())
+  bank             String
+  accountNumber    String?
+  currency         String?
+  startDate        DateTime?
+  endDate          DateTime?
+  uploadedAt       DateTime  @default(now())
+  originalFileName String
+  fileHash         String    @unique
+  status           String    @default("parsed") // parsed | matched | posted
+
+  // back-relations
+  lines BankStatementLine[]
+
+  @@index([bank])
+  @@index([accountNumber])
+  @@index([uploadedAt])
+}
+
+// Línea del extracto bancario
+model BankStatementLine {
+  id            Int      @id @default(autoincrement())
+  statementId   Int
+  date          DateTime
+  description   String?
+  reference     String?
+  amount        Decimal  @db.Decimal(14, 2)
+  balance       Decimal? @db.Decimal(14, 2)
+  externalId    String? // id/ref propio del banco si existe
+  matchScore    Int? // 0..100
+  matchedLineId Int? // JournalLine.id si hicimos match
+  notes         String?
+
+  // Relaciones
+  statement   BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  matchedLine JournalLine?  @relation("MatchedJournalLine", fields: [matchedLineId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([statementId])
+  @@index([date])
+  @@index([reference])
+  @@index([amount])
+  @@index([matchedLineId])
+}
+
+/**
+ * =========================
+ * ======= NUEVO (Punto 5): FiscalSettings globales
+ * =========================
+ */
+
+model FiscalSettings {
+  id               Int          @id @default(autoincrement())
+  // Redondeo global para cálculos de IVA/Subtotal/Total
+  roundingMode     RoundingMode @default(HALF_UP)
+  // Si los precios de venta incluyen IVA por defecto
+  priceIncludesTax Boolean      @default(false)
+
+  // Referencias opcionales a impuestos estándar (para mapeos rápidos)
+  defaultVat19Id Int?
+  defaultVat5Id  Int?
+  defaultVat0Id  Int?
+
+  // Configuración DIAN (sin envío por defecto)
+  dianEnvironment        DianEnvironment @default(TEST)
+  dianSoftwareId         String? @db.VarChar(64)
+  dianSoftwarePin        String? @db.VarChar(64)
+  dianTestSetId          String? @db.VarChar(64)
+  autoDeliverElectronicDocs Boolean @default(false)
+
+  // Relaciones nombradas (tres FKs a Tax)
+  defaultVat19 Tax? @relation("FS_VAT19", fields: [defaultVat19Id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  defaultVat5  Tax? @relation("FS_VAT5", fields: [defaultVat5Id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  defaultVat0  Tax? @relation("FS_VAT0", fields: [defaultVat0Id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  electronicDocuments ElectronicDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roundingMode])
+  @@index([priceIncludesTax])
+  @@index([defaultVat19Id])
+  @@index([defaultVat5Id])
+  @@index([defaultVat0Id])
+}
+
+model AccountingAccountSetting {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  accountCode String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([accountCode])
+}
+
+model FixedAssetCategory {
+  id                                 Int                 @id @default(autoincrement())
+  code                               String              @unique
+  name                               String
+  description                        String?
+  depreciationMethod                 DepreciationMethod  @default(STRAIGHT_LINE)
+  usefulLifeMonths                   Int
+  residualRate                       Decimal?            @db.Decimal(5, 2)
+  assetAccountCode                   String
+  accumulatedDepreciationAccountCode String
+  depreciationExpenseAccountCode     String
+  disposalGainAccountCode            String?
+  disposalLossAccountCode            String?
+  impairmentAccountCode              String?
+  defaultCostCenterId                Int?
+  notes                              String?
+  createdAt                          DateTime            @default(now())
+  updatedAt                          DateTime            @updatedAt
+
+  defaultCostCenter CostCenter? @relation(fields: [defaultCostCenterId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  assets FixedAsset[]
+
+  @@index([depreciationMethod])
+  @@index([assetAccountCode])
+}
+
+model FixedAssetLocation {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  notes       String?
+  parentId    Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   FixedAssetLocation? @relation("FixedAssetLocationHierarchy", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  children FixedAssetLocation[] @relation("FixedAssetLocationHierarchy")
+  assets   FixedAsset[]
+}
+
+model FixedAssetPolicy {
+  id                 Int      @id @default(autoincrement())
+  provider           String
+  policyNumber       String   @unique
+  coverageSummary    String?
+  startDate          DateTime?
+  endDate            DateTime?
+  premium            Decimal? @db.Decimal(18, 2)
+  currencyCode       String?  @db.VarChar(3)
+  contactName        String?
+  contactEmail       String?
+  contactPhone       String?
+  notes              String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  assets FixedAsset[]
+}
+
+model FixedAsset {
+  id                       Int                @id @default(autoincrement())
+  code                     String             @unique
+  name                     String
+  categoryId               Int
+  locationId               Int?
+  policyId                 Int?
+  acquisitionDate          DateTime
+  acquisitionCost          Decimal            @db.Decimal(18, 2)
+  residualValue            Decimal            @default(0) @db.Decimal(18, 2)
+  accumulatedDepreciation  Decimal            @default(0) @db.Decimal(18, 2)
+  bookValue                Decimal            @default(0) @db.Decimal(18, 2)
+  usefulLifeMonths         Int
+  depreciationMethod       DepreciationMethod @default(STRAIGHT_LINE)
+  decliningBalanceRate     Decimal?           @db.Decimal(6, 4)
+  status                   FixedAssetStatus   @default(ACTIVE)
+  depreciationStart        DateTime?
+  lastDepreciatedYear      Int?
+  lastDepreciatedMonth     Int?
+  costCenterId             Int?
+  thirdPartyId             Int?
+  location                 String?
+  serialNumber             String?
+  policyNumber             String?
+  supportUrl               String?
+  description              String?
+  customFields             Json?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  disposedAt               DateTime?
+
+  category   FixedAssetCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  costCenter CostCenter?        @relation(fields: [costCenterId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  thirdParty ThirdParty?        @relation(fields: [thirdPartyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  locationRef FixedAssetLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  policy      FixedAssetPolicy?   @relation(fields: [policyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  movements FixedAssetMovement[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([costCenterId])
+  @@index([thirdPartyId])
+  @@index([locationId])
+  @@index([policyId])
+}
+
+model FixedAssetDepreciationRun {
+  id                     Int                   @id @default(autoincrement())
+  periodYear             Int
+  periodMonth            Int
+  status                 DepreciationRunStatus @default(SCHEDULED)
+  scheduledAt            DateTime              @default(now())
+  executedAt             DateTime?
+  journalEntryId         Int?
+  reversalJournalEntryId Int?
+  totalAssets            Int                   @default(0)
+  totalAmount            Decimal               @default(0) @db.Decimal(18, 2)
+  autoScheduled          Boolean               @default(false)
+  notes                  String?
+  createdBy              String?
+  updatedAt              DateTime              @updatedAt
+
+  journalEntry         JournalEntry?          @relation("DepreciationRunJournal", fields: [journalEntryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  reversalJournalEntry JournalEntry?          @relation("DepreciationRunReversal", fields: [reversalJournalEntryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  movements            FixedAssetMovement[]
+
+  @@unique([periodYear, periodMonth])
+  @@index([periodYear, periodMonth])
+}
+
+model FixedAssetMovement {
+  id                     Int                    @id @default(autoincrement())
+  assetId                Int
+  depreciationRunId      Int?
+  type                   FixedAssetMovementType
+  movementDate           DateTime               @default(now())
+  amount                 Decimal                @db.Decimal(18, 2)
+  bookValueAfter         Decimal?               @db.Decimal(18, 2)
+  accumulatedAfter       Decimal?               @db.Decimal(18, 2)
+  journalEntryId         Int?
+  description            String?
+  metadata               Json?
+  costCenterId           Int?
+  thirdPartyId           Int?
+  counterpartyAccountCode String?
+  createdAt              DateTime               @default(now())
+  createdBy              String?
+
+  asset           FixedAsset                 @relation(fields: [assetId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  depreciationRun FixedAssetDepreciationRun? @relation(fields: [depreciationRunId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  journalEntry    JournalEntry?              @relation(fields: [journalEntryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  costCenter      CostCenter?                @relation(fields: [costCenterId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  thirdParty      ThirdParty?                @relation(fields: [thirdPartyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([assetId])
+  @@index([type])
+  @@index([movementDate])
+  @@index([journalEntryId])
+}
+
+model ElectronicDocument {
+  id                    Int                      @id @default(autoincrement())
+  type                  ElectronicDocumentType
+  status                ElectronicDocumentStatus @default(DRAFT)
+  environment           DianEnvironment          @default(TEST)
+  fiscalSettingsId      Int?
+  sourceType            String
+  sourceId              Int
+  shouldDeliver         Boolean                  @default(false)
+  cufe                  String?                  @unique
+  dianTrackId           String?
+  deliveryReference     String?
+  signedXmlPath         String?
+  zipPath               String?
+  responseXmlPath       String?
+  rejectionReason       String?
+  lastAttemptAt         DateTime?
+  nextAttemptAt         DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  fiscalSettings FiscalSettings? @relation(fields: [fiscalSettingsId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  salesInvoice   SalesInvoice?           @relation("SalesInvoiceElectronic")
+
+  @@unique([sourceType, sourceId])
+  @@index([status])
+  @@index([type])
+  @@index([environment])
+}
+
+// === POS / Caja ===
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashMovementKind {
+  SALE_RECEIPT // ingreso por venta (efectivo)
+  REFUND // devolución (salida)
+  CASH_IN // ingreso manual
+  CASH_OUT // egreso manual (pagos menores, etc.)
+}
+
+model CashRegister {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  location  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions CashSession[]
+}
+
+model CashSession {
+  id            Int               @id @default(autoincrement())
+  registerId    Int
+  userId        Int
+  openedAt      DateTime          @default(now())
+  closedAt      DateTime?
+  openingAmount Decimal           @default(0) @db.Decimal(14, 2)
+  expectedClose Decimal           @default(0) @db.Decimal(14, 2)
+  countedClose  Decimal?          @db.Decimal(14, 2)
+  status        CashSessionStatus @default(OPEN)
+  note          String?
+
+  register  CashRegister   @relation(fields: [registerId], references: [id])
+  user      User           @relation(fields: [userId], references: [id])
+  movements CashMovement[]
+  counts    CashCount[]
+
+  @@index([registerId, status, openedAt])
+  @@index([userId])
+}
+
+model CashMovement {
+  id        Int              @id @default(autoincrement())
+  sessionId Int
+  kind      CashMovementKind
+  amount    Decimal          @db.Decimal(14, 2)
+  createdAt DateTime         @default(now())
+  refType   String? // 'SalesInvoice' | 'CashReceipt' | 'Manual'
+  refId     Int?
+
+  session CashSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId, kind, createdAt])
+}
+
+model CashCount {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  denom     String // "100000", "50000", "20000", "10000", "5000", "2000", "1000", "500", "200", "100", "50"
+  qty       Int      @default(0)
+  amount    Decimal  @db.Decimal(14, 2)
+  createdAt DateTime @default(now())
+
+  session CashSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+}

@@ -1,0 +1,215 @@
+{
+  "totalDelta": 2164833,
+  "affected": [
+    {
+      "itemId": 3,
+      "itemName": "Azúcar",
+      "layerId": 1,
+      "moveId": 35,
+      "moveUom": "G",
+      "itemBase": "KG",
+      "remainingQty": 0,
+      "oldUnitCost": 5000,
+      "newUnitCost": 5000000,
+      "oldValue": 0,
+      "newValue": 0,
+      "delta": 0
+    },
+    {
+      "itemId": 3,
+      "itemName": "Azúcar",
+      "layerId": 10,
+      "moveId": 73,
+      "moveUom": "G",
+      "itemBase": "KG",
+      "remainingQty": 0,
+      "oldUnitCost": 3000,
+      "newUnitCost": 3000000,
+      "oldValue": 0,
+      "newValue": 0,
+      "delta": 0
+    },
+    {
+      "itemId": 3,
+      "itemName": "Azúcar",
+      "layerId": 11,
+      "moveId": 87,
+      "moveUom": "G",
+      "itemBase": "KG",
+      "remainingQty": 0,
+      "oldUnitCost": 1500,
+      "newUnitCost": 1500000,
+      "oldValue": 0,
+      "newValue": 0,
+      "delta": 0
+    },
+    {
+      "itemId": 3,
+      "itemName": "Azúcar",
+      "layerId": 12,
+      "moveId": 92,
+      "moveUom": "G",
+      "itemBase": "KG",
+      "remainingQty": 0,
+      "oldUnitCost": 5000,
+      "newUnitCost": 5000000,
+      "oldValue": 0,
+      "newValue": 0,
+      "delta": 0
+    },
+    {
+      "itemId": 3,
+      "itemName": "Azúcar",
+      "layerId": 14,
+      "moveId": 100,
+      "moveUom": "G",
+      "itemBase": "KG",
+      "remainingQty": 0.1,
+      "oldUnitCost": 1000,
+      "newUnitCost": 1000000,
+      "oldValue": 100,
+      "newValue": 100000,
+      "delta": 99900
+    },
+    {
+      "itemId": 3,
+      "itemName": "Azúcar",
+      "layerId": 13,
+      "moveId": 93,
+      "moveUom": "G",
+      "itemBase": "KG",
+      "remainingQty": 0.739,
+      "oldUnitCost": 3000,
+      "newUnitCost": 3000000,
+      "oldValue": 2217,
+      "newValue": 2217000,
+      "delta": 2214783
+    },
+    {
+      "itemId": 20,
+      "itemName": "arroz por gramaje",
+      "layerId": 17,
+      "moveId": 112,
+      "moveUom": "KG",
+      "itemBase": "G",
+      "remainingQty": 100,
+      "oldUnitCost": 1500,
+      "newUnitCost": 1.5,
+      "oldValue": 150000,
+      "newValue": 150,
+      "delta": -149850
+    }
+  ],
+  "grouped": {
+    "3": {
+      "itemName": "Azúcar",
+      "lines": [
+        {
+          "itemId": 3,
+          "itemName": "Azúcar",
+          "layerId": 1,
+          "moveId": 35,
+          "moveUom": "G",
+          "itemBase": "KG",
+          "remainingQty": 0,
+          "oldUnitCost": 5000,
+          "newUnitCost": 5000000,
+          "oldValue": 0,
+          "newValue": 0,
+          "delta": 0
+        },
+        {
+          "itemId": 3,
+          "itemName": "Azúcar",
+          "layerId": 10,
+          "moveId": 73,
+          "moveUom": "G",
+          "itemBase": "KG",
+          "remainingQty": 0,
+          "oldUnitCost": 3000,
+          "newUnitCost": 3000000,
+          "oldValue": 0,
+          "newValue": 0,
+          "delta": 0
+        },
+        {
+          "itemId": 3,
+          "itemName": "Azúcar",
+          "layerId": 11,
+          "moveId": 87,
+          "moveUom": "G",
+          "itemBase": "KG",
+          "remainingQty": 0,
+          "oldUnitCost": 1500,
+          "newUnitCost": 1500000,
+          "oldValue": 0,
+          "newValue": 0,
+          "delta": 0
+        },
+        {
+          "itemId": 3,
+          "itemName": "Azúcar",
+          "layerId": 12,
+          "moveId": 92,
+          "moveUom": "G",
+          "itemBase": "KG",
+          "remainingQty": 0,
+          "oldUnitCost": 5000,
+          "newUnitCost": 5000000,
+          "oldValue": 0,
+          "newValue": 0,
+          "delta": 0
+        },
+        {
+          "itemId": 3,
+          "itemName": "Azúcar",
+          "layerId": 14,
+          "moveId": 100,
+          "moveUom": "G",
+          "itemBase": "KG",
+          "remainingQty": 0.1,
+          "oldUnitCost": 1000,
+          "newUnitCost": 1000000,
+          "oldValue": 100,
+          "newValue": 100000,
+          "delta": 99900
+        },
+        {
+          "itemId": 3,
+          "itemName": "Azúcar",
+          "layerId": 13,
+          "moveId": 93,
+          "moveUom": "G",
+          "itemBase": "KG",
+          "remainingQty": 0.739,
+          "oldUnitCost": 3000,
+          "newUnitCost": 3000000,
+          "oldValue": 2217,
+          "newValue": 2217000,
+          "delta": 2214783
+        }
+      ],
+      "subtotal": 2314683
+    },
+    "20": {
+      "itemName": "arroz por gramaje",
+      "lines": [
+        {
+          "itemId": 20,
+          "itemName": "arroz por gramaje",
+          "layerId": 17,
+          "moveId": 112,
+          "moveUom": "KG",
+          "itemBase": "G",
+          "remainingQty": 100,
+          "oldUnitCost": 1500,
+          "newUnitCost": 1.5,
+          "oldValue": 150000,
+          "newValue": 150,
+          "delta": -149850
+        }
+      ],
+      "subtotal": -149850
+    }
+  }
+}
